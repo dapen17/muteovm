@@ -128,7 +128,6 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if "dont@" not in fullname.lower():
         # Hapus pesan karena pelanggaran
         try:
-            await asyncio.sleep(3)
             await message.delete()
 
         except:
@@ -147,16 +146,24 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             print(f"Gagal mute: {e}")
 
+                # Kirim pesan reply dulu
         keyboard = InlineKeyboardMarkup.from_button(
             InlineKeyboardButton("Check Unmute", callback_data=f"check_{username}")
         )
-
         await context.bot.send_message(
-        chat_id=MAIN_GROUP_ID,
-        text=f"⚠️ @{username}, kamu harus pakai 'dont@' karena kamu overmention.\nSelama 24 Jam kamu harus pasang nama dont@ di nama akun kamu.",
-        reply_markup=keyboard,
-        reply_to_message_id=message.message_id  # Ini akan buat bot reply ke pesan user
-    )
+            chat_id=MAIN_GROUP_ID,
+            text=f"⚠️ @{username}, kamu harus pakai 'dont@' karena kamu overmention.\nSelama 24 Jam kamu harus pasang nama dont@ di nama akun kamu.",
+            reply_markup=keyboard,
+            reply_to_message_id=message.message_id
+        )
+
+        # Jeda sebelum hapus pesan user
+        try:
+            await asyncio.sleep(3)
+            await message.delete()
+        except Exception as e:
+            print(f"Gagal hapus pesan: {e}")
+
 
     else:
         if track["muted"]:
