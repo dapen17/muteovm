@@ -2,6 +2,7 @@ from telegram import Update, ChatPermissions, InlineKeyboardMarkup, InlineKeyboa
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from datetime import datetime, timedelta, timezone
 import re
+import asyncio  # wajib import agar bisa pakai asyncio.sleep()
 
 tracked_users = {}
 
@@ -56,7 +57,20 @@ async def check_unmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = query.from_user
     username = user.username.lower() if user.username else None
 
-    if not username or username not in tracked_users:
+    # Ambil username target dari callback data, misal "check_username"
+    data = query.data
+    if not data.startswith("check_"):
+        await query.answer()
+        return
+    target_username = data[6:]  # ambil setelah "check_"
+
+    # Jika yang klik bukan user yang ter-track, hanya beri popup alert tanpa hapus tombol/pesan
+    if username != target_username:
+        await query.answer(text="🚫 Kamu tidak berhak mengklik tombol ini.", show_alert=True)
+        return
+
+    # Jika user tidak dalam tracked_users, beri pesan dan jangan hilangkan tombol
+    if username not in tracked_users:
         await query.answer()
         await query.edit_message_text("🚫 Kamu tidak sedang dalam pengawasan OVM.")
         return
@@ -97,6 +111,7 @@ async def check_unmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             await query.edit_message_text(f"❌ Gagal unmute: {e}")
     else:
+        await query.answer()
         await query.edit_message_text("✅ Kamu tidak sedang mute.")
 
 async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -127,11 +142,6 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if "dont@" not in fullname.lower():
         # Hapus pesan karena pelanggaran
-        try:
-            await message.delete()
-
-        except:
-            pass
 
         # Mute 10 menit dengan until_date berupa timestamp UTC integer
         try:
@@ -146,7 +156,7 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             print(f"Gagal mute: {e}")
 
-                # Kirim pesan reply dulu
+        # Kirim pesan reply dulu
         keyboard = InlineKeyboardMarkup.from_button(
             InlineKeyboardButton("Check Unmute", callback_data=f"check_{username}")
         )
@@ -157,13 +167,12 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_to_message_id=message.message_id
         )
 
-        # Jeda sebelum hapus pesan user
+        # Jeda sebelum hapus pesan user (lagi)
         try:
-            await asyncio.sleep(3)
+            await asyncio.sleep(2)
             await message.delete()
         except Exception as e:
             print(f"Gagal hapus pesan: {e}")
-
 
     else:
         if track["muted"]:
