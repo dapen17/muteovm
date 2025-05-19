@@ -128,7 +128,9 @@ async def on_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if "dont@" not in fullname.lower():
         # Hapus pesan karena pelanggaran
         try:
+            await asyncio.sleep(6)
             await message.delete()
+
         except:
             pass
 
